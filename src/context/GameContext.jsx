@@ -47,14 +47,14 @@ export const GameProvider = ({ children }) => {
         body: JSON.stringify({ isPing: true, useFallback: false })
       });
       const data = await res.json();
-      if (data.error && data.error.includes('503')) {
+      if (data.error) {
         const fallbackRes = await fetch('/api/transmit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ isPing: true, useFallback: true })
         });
         const fallbackData = await fallbackRes.json();
-        if (fallbackData.error && fallbackData.error.includes('503')) {
+        if (fallbackData.error) {
           return 'fatal';
         }
         setActiveModel('fallback');
