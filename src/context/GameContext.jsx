@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useRef } from 'react';
+import { DIFFICULTY_MODES, HUMAN_PERSONA_KEYS } from '../data/difficultyConfig';
 
 const GameContext = createContext();
 
@@ -16,23 +17,43 @@ const INITIAL_STATE = {
   totalTransmissionsUsed: 0,
   totalTimeUsed: 0,
   roundHistory: [], // track what happened each round
+  difficulty: 'MEDIUM', // EASY, MEDIUM, HARD, NIGHTMARE
+  pastTransmissions: [], // array of lowercase trimmed strings sent by user
+  lastMessagedSignalId: null,
 };
 
 export const GameProvider = ({ children }) => {
   const [gameState, setGameState] = useState(INITIAL_STATE);
-  const [evidenceNotes, setEvidenceNotes] = useState({});
+  const [evidenceNotes, setEvidenceNotes] = useState(() => {
+    const saved = sessionStorage.getItem('operation_imitation_notes');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const updateEvidenceNotes = (notesOrUpdater) => {
+    setEvidenceNotes(prev => {
+      const newNotes = typeof notesOrUpdater === 'function' ? notesOrUpdater(prev) : notesOrUpdater;
+      sessionStorage.setItem('operation_imitation_notes', JSON.stringify(newNotes));
+      return newNotes;
+    });
+  };
   const rosterRef = useRef(null);
 
-  const startGame = () => {
-    const roster = buildRoundRoster();
+  const getDifficultyConfig = (diff) => DIFFICULTY_MODES[diff || gameState.difficulty] || DIFFICULTY_MODES.MEDIUM;
+
+  const startGame = (difficulty = 'MEDIUM') => {
+    const config = getDifficultyConfig(difficulty);
+    const roster = buildRoundRoster(config);
     rosterRef.current = roster;
     setGameState({
       ...INITIAL_STATE,
+      difficulty,
       gameStatus: 'dossier', // Show dossier first
       round: 1,
+      timeRemaining: config.timerSeconds,
+      clearanceLevel: config.clearanceLevels,
       suspects: generateSuspects(1, roster),
     });
-    setEvidenceNotes({});
+    updateEvidenceNotes({});
   };
 
   const dismissDossier = () => {
@@ -40,6 +61,7 @@ export const GameProvider = ({ children }) => {
   };
 
   const advanceRound = () => {
+    const config = getDifficultyConfig(gameState.difficulty);
     if (gameState.round === 5) {
       setGameState(prev => ({ ...prev, gameStatus: 'won' }));
       return;
@@ -48,11 +70,12 @@ export const GameProvider = ({ children }) => {
     setGameState(prev => ({
       ...prev,
       round: nextRound,
-      timeRemaining: 120,
+      timeRemaining: config.timerSeconds,
       transmissionsRemaining: 5,
       gameStatus: 'dossier', // Show dossier before each round
       suspects: generateSuspects(nextRound, rosterRef.current),
       activeSuspectId: null,
+      lastMessagedSignalId: null,
     }));
   };
 
@@ -74,10 +97,11 @@ export const GameProvider = ({ children }) => {
   }));
   
   const recordRoundStats = (isCorrect, votedSuspectId) => {
+    const config = getDifficultyConfig(gameState.difficulty);
     setGameState(prev => ({
       ...prev,
       correctPicks: isCorrect ? prev.correctPicks + 1 : prev.correctPicks,
-      totalTimeUsed: prev.totalTimeUsed + (120 - prev.timeRemaining),
+      totalTimeUsed: prev.totalTimeUsed + (config.timerSeconds - prev.timeRemaining),
       roundHistory: [...prev.roundHistory, {
         round: prev.round,
         correct: isCorrect,
@@ -88,7 +112,7 @@ export const GameProvider = ({ children }) => {
           isHuman: s.isHuman,
           chatLength: s.chat.length,
         })),
-        timeUsed: 120 - prev.timeRemaining,
+        timeUsed: config.timerSeconds - prev.timeRemaining,
         transmissionsUsed: 5 - prev.transmissionsRemaining,
       }],
     }));
@@ -96,13 +120,53 @@ export const GameProvider = ({ children }) => {
 
   const setActiveSuspectId = (id) => setGameState(prev => ({ ...prev, activeSuspectId: id }));
 
+  const withdrawSuspect = (id) => setGameState(prev => ({
+    ...prev,
+    suspects: prev.suspects.map(s => s.id === id ? { ...s, isWithdrawn: true } : s)
+  }));
+
   const addMessageToSuspect = (suspectId, message, sender) => {
-    setGameState(prev => ({
-      ...prev,
-      suspects: prev.suspects.map(s => 
-        s.id === suspectId ? { ...s, chat: [...s.chat, { sender, text: message }] } : s
-      )
-    }));
+    setGameState(prev => {
+      const suspects = prev.suspects.map(s => {
+        if (s.id !== suspectId) return s;
+
+        let newTrustScore = s.trustScore;
+        // Apply simple heuristics to trust score when receiving a message
+        if (sender !== 'YOU') {
+          const textLower = message.toLowerCase();
+          let trustDelta = 0;
+
+          // Numbers/enumeration -> trust DOWN slightly
+          if (/\b(\d+|first|second|third|1\.|2\.)\b/.test(textLower)) trustDelta -= 5;
+          // Personal name/detail -> trust UP
+          if (/\b(wife|husband|mum|dad|brother|sister|son|daughter|fiancé|robert|eleanor|dorothy|william)\b/.test(textLower)) trustDelta += 10;
+          // Very short and deflects -> trust DOWN
+          if (message.length < 30 && /\?/.test(message)) trustDelta -= 10;
+          // Contradicts earlier message -> trust UP a lot
+          if (/\b(wait, no|i mean|sorry, i|actually|correction)\b/.test(textLower)) trustDelta += 20;
+
+          newTrustScore = Math.max(0, Math.min(100, newTrustScore + trustDelta));
+        }
+
+        return { 
+          ...s, 
+          chat: [...s.chat, { sender, text: message }],
+          trustScore: newTrustScore,
+          hasBeenMessaged: sender === 'YOU' ? true : s.hasBeenMessaged
+        };
+      });
+
+      if (sender === 'YOU') {
+        return {
+          ...prev,
+          suspects,
+          lastMessagedSignalId: suspectId,
+          pastTransmissions: [...(prev.pastTransmissions || []), message.trim().toLowerCase()]
+        };
+      }
+      
+      return { ...prev, suspects };
+    });
   };
 
   return (
@@ -117,9 +181,11 @@ export const GameProvider = ({ children }) => {
       addMessageToSuspect,
       recordRoundStats,
       evidenceNotes,
-      setEvidenceNotes,
+      setEvidenceNotes: updateEvidenceNotes,
       setGameState,
       dismissDossier,
+      getDifficultyConfig,
+      withdrawSuspect,
     }}>
       {children}
     </GameContext.Provider>
@@ -127,7 +193,6 @@ export const GameProvider = ({ children }) => {
 };
 
 const ALL_AI_PERSONAS = ['CIPHER', 'ORACLE', 'MARLOWE', 'STATIC', 'WREN', 'ARGUS', 'ECHO'];
-const HUMAN_PERSONA = 'NOVAK';
 
 /**
  * Shuffle an array in place (Fisher-Yates).
@@ -142,42 +207,74 @@ function shuffle(arr) {
 }
 
 /**
- * Build the full 5-round roster up front so every round
- * gets unique AI personas. 7 AIs available:
- *   Rounds 1-4: 2 AIs each = 8 slots, but we have 7 — 
- *   so we allow 1 repeat between round 4 and the earlier pool.
- *   Round 5: 3 remaining AIs (all AI, no human).
+ * Build the full 5-round roster based on difficulty config.
+ * 
+ * EASY:      Same human (NOVAK) all rounds. Only ORACLE + STATIC as AIs.
+ * MEDIUM:    Rotating humans, full AI pool, normal tells.
+ * HARD:      Rotating humans, full AI pool, suppressed tells.
+ * NIGHTMARE: Rotating humans, full AI pool, suppressed tells, twist at round 3.
  */
-function buildRoundRoster() {
-  const shuffled = shuffle(ALL_AI_PERSONAS); // e.g. [WREN, STATIC, ECHO, ARGUS, CIPHER, ORACLE, MARLOWE]
-
-  // Rounds 1-4 get 2 unique AIs each (indices 0-1, 2-3, 4-5, 6 + wrap)
-  const rounds = {};
-  for (let r = 1; r <= 4; r++) {
-    const i = (r - 1) * 2;
-    const ai1 = shuffled[i % shuffled.length];
-    const ai2 = shuffled[(i + 1) % shuffled.length];
-    rounds[r] = [HUMAN_PERSONA, ai1, ai2];
+function buildRoundRoster(config) {
+  const { humanPersonaMode, aiPool, twistRound } = config;
+  
+  // Determine which AI personas to use
+  const availableAIs = aiPool ? [...aiPool] : [...ALL_AI_PERSONAS];
+  
+  // Determine human personas for each round
+  let humanForRound;
+  if (humanPersonaMode === 'fixed') {
+    // EASY: Same human every round
+    humanForRound = [null, 'NOVAK', 'NOVAK', 'NOVAK', 'NOVAK', 'NOVAK'];
+  } else {
+    // MEDIUM/HARD/NIGHTMARE: Rotating humans
+    const shuffledHumans = shuffle(HUMAN_PERSONA_KEYS);
+    humanForRound = [null, ...shuffledHumans.slice(0, 5)]; // index 1-5
   }
-
-  // Round 5: pick 3 AIs not heavily used — just grab last 3 from a fresh shuffle
-  const freshShuffle = shuffle(ALL_AI_PERSONAS);
-  rounds[5] = [freshShuffle[0], freshShuffle[1], freshShuffle[2]];
-
+  
+  const shuffledAIs = shuffle(availableAIs);
+  const rounds = {};
+  
+  for (let r = 1; r <= 5; r++) {
+    const isAllAIRound = r >= twistRound && r === 5 || (twistRound < 5 && r >= twistRound);
+    
+    if (isAllAIRound) {
+      // All-AI round (twist round and beyond)
+      if (availableAIs.length >= 3) {
+        const freshShuffle = shuffle(availableAIs);
+        rounds[r] = [freshShuffle[0], freshShuffle[1], freshShuffle[2]];
+      } else {
+        // Easy mode: limited pool, may need repeats
+        const pool = shuffle(availableAIs);
+        rounds[r] = [pool[0], pool[1 % pool.length], pool[0]];
+      }
+    } else {
+      // Normal round with 1 human + 2 AIs
+      const aiIndex = (r - 1) * 2;
+      const ai1 = shuffledAIs[aiIndex % shuffledAIs.length];
+      const ai2 = shuffledAIs[(aiIndex + 1) % shuffledAIs.length];
+      rounds[r] = [humanForRound[r], ai1, ai2];
+    }
+  }
+  
   return rounds;
 }
 
 function generateSuspects(round, roster) {
-  const selected = roster[round] || [HUMAN_PERSONA, 'CIPHER', 'ORACLE'];
+  const selected = roster[round] || ['NOVAK', 'CIPHER', 'ORACLE'];
 
-  // Shuffle positions so NOVAK isn't always SIGNAL-A
+  // Shuffle positions so human isn't always SIGNAL-A
   const shuffledPositions = shuffle(selected);
+
+  // Determine which personas are human
+  const HUMAN_KEYS = new Set(HUMAN_PERSONA_KEYS);
 
   return shuffledPositions.map((persona, index) => ({
     id: `SIGNAL-${['A', 'B', 'C'][index]}`,
     persona: persona,
-    isHuman: persona === HUMAN_PERSONA,
+    isHuman: HUMAN_KEYS.has(persona),
     chat: [],
     trustScore: 50,
+    hasBeenMessaged: false,
+    isWithdrawn: false,
   }));
 }
