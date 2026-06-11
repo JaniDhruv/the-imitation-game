@@ -5,11 +5,14 @@ import App from './App.jsx'
 import './index.css'
 import { GameProvider } from './context/GameContext.jsx'
 
+import { Analytics } from '@vercel/analytics/react'
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <GameProvider>
         <App />
+        <Analytics />
       </GameProvider>
     </BrowserRouter>
   </React.StrictMode>,
