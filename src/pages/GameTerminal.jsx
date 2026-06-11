@@ -10,6 +10,7 @@ import ScreenTransition from '../components/ScreenTransition';
 import useSolsticeTheme from '../hooks/useSolsticeTheme';
 import soundEngine from '../audio/SoundEngine';
 import { useNavigate } from 'react-router-dom';
+import RulesPopup from '../components/RulesPopup';
 
 const DIFFICULTY_BADGE_COLORS = {
   EASY: 'var(--color-text)',
@@ -27,6 +28,7 @@ const GameTerminal = () => {
   const [transitionTrigger, setTransitionTrigger] = useState(0);
   const [showTwistMessage, setShowTwistMessage] = useState(false);
   const [twistStage, setTwistStage] = useState(0);
+  const [showRules, setShowRules] = useState(gameState.round === 1);
   const lastTickRef = useRef(null);
 
   const config = getDifficultyConfig(gameState.difficulty);
@@ -320,6 +322,13 @@ const GameTerminal = () => {
 
       {renderStatusModal()}
       
+      {showRules && (
+        <RulesPopup 
+          difficulty={gameState.difficulty} 
+          onClose={() => setShowRules(false)} 
+        />
+      )}
+
       {/* Header Panel */}
       <div className="game-header" style={{ 
         border: '1px solid var(--color-text)', 
@@ -334,6 +343,13 @@ const GameTerminal = () => {
         <div className="text-glow" style={{ letterSpacing: '1px' }}>
           {sunChar} OPERATION: IMITATION
         </div>
+        <button 
+          onClick={() => setShowRules(true)} 
+          style={{ padding: '2px 6px', fontSize: '0.8em', marginLeft: '-5px' }}
+          title="Analyst Briefing / Rules"
+        >
+          [ ? ]
+        </button>
         <div>
           ROUND {gameState.round}/5 — {getSolsticeLabel(gameState.round)}
         </div>
