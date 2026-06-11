@@ -147,7 +147,6 @@ CRITICAL RULES:
               parts: [{ text: msg.text }]
             }));
 
-            try {
               if (isPing) {
                 await ai.models.generateContent({
                   model: targetModel,
