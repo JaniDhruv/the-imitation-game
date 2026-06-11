@@ -1,10 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
+import soundEngine from '../audio/SoundEngine';
 
 const ControlPanel = () => {
   const { gameState, addMessageToSuspect, decrementTransmissions } = useGame();
   const [inputMessage, setInputMessage] = useState('');
   const [isTransmitting, setIsTransmitting] = useState(false);
+  const inputRef = useRef(null);
+  const abortControllerRef = useRef(null);
+
+  // Auto-focus input when suspect changes
+  useEffect(() => {
+    if (gameState.activeSuspectId && inputRef.current && gameState.gameStatus === 'playing') {
+      inputRef.current.focus();
+    }
+  }, [gameState.activeSuspectId, gameState.gameStatus]);
+
+  // Cancel on round change or unmount
+  useEffect(() => {
+    return () => abortControllerRef.current?.abort();
+  }, [gameState.round]);
 
   const handleTransmit = async (e) => {
     e.preventDefault();
@@ -14,11 +29,20 @@ const ControlPanel = () => {
     const messageToSend = inputMessage;
     const targetId = gameState.activeSuspectId;
     const targetSuspect = gameState.suspects.find(s => s.id === targetId);
+
+    // Cancel any in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
     
     setInputMessage('');
     addMessageToSuspect(targetId, messageToSend, 'YOU');
     decrementTransmissions();
     setIsTransmitting(true);
+    
+    // Sound effects
+    soundEngine.transmitSend();
 
     try {
       const response = await fetch('/api/transmit', {
@@ -28,11 +52,15 @@ const ControlPanel = () => {
           message: messageToSend,
           persona: targetSuspect.persona,
           chatHistory: targetSuspect.chat
-        })
+        }),
+        signal: abortControllerRef.current.signal
       });
       
       const data = await response.json();
       
+      // Receiving sound
+      soundEngine.startReceiving();
+
       if (data && data.reply) {
          addMessageToSuspect(targetId, data.reply, targetId);
       } else if (data && data.error) {
@@ -41,6 +69,7 @@ const ControlPanel = () => {
          addMessageToSuspect(targetId, "[SIGNAL CORRUPTED]", targetId);
       }
     } catch (error) {
+      if (error.name === 'AbortError') return; // silently ignore
       console.error(error);
       addMessageToSuspect(targetId, "[CONNECTION ERROR. RETRYING LATER.]", targetId);
     } finally {
@@ -48,36 +77,85 @@ const ControlPanel = () => {
     }
   };
 
+  // Handle keypress sound
+  const handleKeyDown = (e) => {
+    if (e.key.length === 1) { // Only for printable characters
+      soundEngine.keyClick();
+    }
+  };
+
+  const noSuspect = !gameState.activeSuspectId;
+  const noTransmissions = gameState.transmissionsRemaining <= 0;
+
   return (
-    <div style={{ border: '1px solid var(--color-text)', padding: '10px', marginTop: '10px' }}>
+    <div style={{ 
+      border: '1px solid var(--color-text)', 
+      padding: '10px', 
+      marginTop: '8px',
+    }}>
       <form onSubmit={handleTransmit} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-        <span>&gt; TYPE YOUR TRANSMISSION:</span>
+        <span style={{ 
+          color: 'var(--color-text-dim)', 
+          fontSize: '0.85em',
+          whiteSpace: 'nowrap',
+        }}>
+          &gt;
+        </span>
         <input 
+          ref={inputRef}
           type="text" 
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
           style={{ flex: 1 }}
           autoFocus
-          disabled={!gameState.activeSuspectId || gameState.transmissionsRemaining <= 0 || isTransmitting}
-          placeholder={gameState.activeSuspectId ? `To ${gameState.activeSuspectId}...` : 'SELECT A SIGNAL FIRST'}
+          disabled={noSuspect || noTransmissions || isTransmitting || gameState.gameStatus !== 'playing'}
+          placeholder={
+            noSuspect ? 'SELECT A SIGNAL FIRST [PRESS 1, 2, OR 3]' : 
+            noTransmissions ? 'NO TRANSMISSIONS REMAINING — VOTE NOW' :
+            `TRANSMIT TO ${gameState.activeSuspectId}...`
+          }
         />
         <button 
           type="submit" 
-          disabled={!gameState.activeSuspectId || gameState.transmissionsRemaining <= 0 || isTransmitting || !inputMessage.trim()}
+          disabled={noSuspect || noTransmissions || isTransmitting || !inputMessage.trim() || gameState.gameStatus !== 'playing'}
+          style={{ whiteSpace: 'nowrap' }}
         >
-          {isTransmitting ? '[ TRANSMITTING... ]' : '[ → ]'}
+          {isTransmitting ? '[ ◌◌◌ ]' : '[ SEND → ]'}
         </button>
       </form>
-      <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-dim)' }}>
-        <span>TRANSMISSIONS REMAINING: 
-          <span style={{ color: 'var(--color-amber)', marginLeft: '10px' }}>
+      <div style={{ 
+        marginTop: '8px', 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        color: 'var(--color-text-dim)',
+        fontSize: '0.85em',
+        flexWrap: 'wrap',
+        gap: '5px',
+      }}>
+        <span>
+          TRANSMISSIONS: 
+          <span style={{ 
+            color: noTransmissions ? 'var(--color-red)' : 'var(--color-amber)', 
+            marginLeft: '8px',
+            letterSpacing: '2px',
+          }}>
              {'●'.repeat(gameState.transmissionsRemaining)}{'○'.repeat(5 - gameState.transmissionsRemaining)}
           </span>
         </span>
         <span>
-          ACTIVE SIGNAL: 
-          {['SIGNAL-A', 'SIGNAL-B', 'SIGNAL-C'].map(sig => (
-            <span key={sig} style={{ marginLeft: '10px', color: gameState.activeSuspectId === sig ? 'var(--color-text)' : 'inherit' }}>
+          SIGNAL: 
+          {['SIGNAL-A', 'SIGNAL-B', 'SIGNAL-C'].map((sig, idx) => (
+            <span 
+              key={sig} 
+              style={{ 
+                marginLeft: '8px', 
+                color: gameState.activeSuspectId === sig ? 'var(--color-text)' : 'inherit',
+                textShadow: gameState.activeSuspectId === sig ? '0 0 6px var(--color-glow)' : 'none',
+                cursor: 'pointer',
+              }}
+              onClick={() => {}}
+            >
               [{sig.split('-')[1]}]
             </span>
           ))}
