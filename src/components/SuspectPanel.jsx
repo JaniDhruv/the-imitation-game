@@ -59,6 +59,11 @@ const SuspectPanel = ({ suspect, onVote, index }) => {
         </span>
         <span className={isActive ? 'text-glow' : ''}>
           {suspect.id}
+          {suspect.isWithdrawn ? (
+            <span style={{ color: 'var(--color-red)', fontSize: '0.7em', marginLeft: '8px', opacity: 0.8, whiteSpace: 'nowrap' }}>[ WITHDRAWN ]</span>
+          ) : (gameState.difficulty !== 'EASY' && gameState.lastMessagedSignalId === suspect.id) ? (
+            <span style={{ color: 'var(--color-amber)', fontSize: '0.7em', marginLeft: '8px', opacity: 0.8, whiteSpace: 'nowrap' }}>[ COOLING DOWN ]</span>
+          ) : null}
         </span>
         <span style={{ 
           fontSize: '0.65em',

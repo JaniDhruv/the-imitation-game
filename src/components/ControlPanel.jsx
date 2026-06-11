@@ -3,7 +3,7 @@ import { useGame } from '../context/GameContext';
 import soundEngine from '../audio/SoundEngine';
 
 const ControlPanel = () => {
-  const { gameState, addMessageToSuspect, decrementTransmissions } = useGame();
+  const { gameState, addMessageToSuspect, decrementTransmissions, getDifficultyConfig, withdrawSuspect } = useGame();
   const [inputMessage, setInputMessage] = useState('');
   const [isTransmitting, setIsTransmitting] = useState(false);
   const inputRef = useRef(null);
@@ -30,6 +30,22 @@ const ControlPanel = () => {
     const targetId = gameState.activeSuspectId;
     const targetSuspect = gameState.suspects.find(s => s.id === targetId);
 
+    // Check for duplicate message (except in EASY mode)
+    if (gameState.difficulty !== 'EASY' && gameState.pastTransmissions?.includes(messageToSend.trim().toLowerCase())) {
+      setInputMessage('');
+      addMessageToSuspect(targetId, messageToSend, 'YOU');
+      
+      setIsTransmitting(true);
+      try { soundEngine.transmitSend(); } catch(e) {}
+      
+      setTimeout(() => {
+        try { soundEngine.startReceiving(); } catch(e) {}
+        addMessageToSuspect(targetId, '[DUPLICATE TRANSMISSION BLOCKED]', targetId);
+        setIsTransmitting(false);
+      }, 600);
+      return;
+    }
+
     // Cancel any in-flight request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -45,13 +61,17 @@ const ControlPanel = () => {
     soundEngine.transmitSend();
 
     try {
+      const config = getDifficultyConfig(gameState.difficulty);
       const response = await fetch('/api/transmit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: messageToSend,
           persona: targetSuspect.persona,
-          chatHistory: targetSuspect.chat
+          chatHistory: targetSuspect.chat,
+          tellMode: config.tellMode,
+          round: gameState.round,
+          difficulty: gameState.difficulty,
         }),
         signal: abortControllerRef.current.signal
       });
@@ -63,6 +83,14 @@ const ControlPanel = () => {
 
       if (data && data.reply) {
          addMessageToSuspect(targetId, data.reply, targetId);
+         
+         // Nightmare Hostility Withdrawal
+         if (gameState.difficulty === 'NIGHTMARE') {
+           const isHostile = /are you human|are you an ai|prove it|you.?re a machine/i.test(messageToSend);
+           if (isHostile) {
+             withdrawSuspect(targetId);
+           }
+         }
       } else if (data && data.error) {
          addMessageToSuspect(targetId, `[SYSTEM ERROR: ${data.error}]`, targetId);
       } else {
@@ -86,6 +114,10 @@ const ControlPanel = () => {
 
   const noSuspect = !gameState.activeSuspectId;
   const noTransmissions = gameState.transmissionsRemaining <= 0;
+  const activeSuspectObj = gameState.suspects.find(s => s.id === gameState.activeSuspectId);
+  const isWithdrawn = activeSuspectObj?.isWithdrawn;
+  const isCoolingDown = gameState.difficulty !== 'EASY' && gameState.lastMessagedSignalId === gameState.activeSuspectId;
+  const disabled = noSuspect || noTransmissions || isTransmitting || isWithdrawn || isCoolingDown || gameState.gameStatus !== 'playing';
 
   return (
     <div style={{ 
@@ -109,16 +141,18 @@ const ControlPanel = () => {
           onKeyDown={handleKeyDown}
           style={{ flex: 1 }}
           autoFocus
-          disabled={noSuspect || noTransmissions || isTransmitting || gameState.gameStatus !== 'playing'}
+          disabled={disabled}
           placeholder={
             noSuspect ? 'SELECT A SIGNAL FIRST [PRESS 1, 2, OR 3]' : 
             noTransmissions ? 'NO TRANSMISSIONS REMAINING — VOTE NOW' :
+            isWithdrawn ? '[ SIGNAL WITHDRAWN ]' :
+            isCoolingDown ? '[ SIGNAL COOLING DOWN — SELECT ANOTHER ]' :
             `TRANSMIT TO ${gameState.activeSuspectId}...`
           }
         />
         <button 
           type="submit" 
-          disabled={noSuspect || noTransmissions || isTransmitting || !inputMessage.trim() || gameState.gameStatus !== 'playing'}
+          disabled={disabled || !inputMessage.trim()}
           style={{ whiteSpace: 'nowrap' }}
         >
           {isTransmitting ? '[ ◌◌◌ ]' : '[ SEND → ]'}
