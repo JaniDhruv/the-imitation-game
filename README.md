@@ -1,15 +1,17 @@
 <p align="center">
+  <img src="public/og-banner.png" alt="The Imitation Game — Operation Imitation" width="400" />
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/JUNE%2021%2C%201952-THE%20LONGEST%20DAY-33ff00?style=for-the-badge&labelColor=0a0f0a" alt="June 21, 1952" />
   <img src="https://img.shields.io/badge/POWERED%20BY-GEMINI%20AI-4285F4?style=for-the-badge&labelColor=0a0f0a" alt="Gemini AI" />
   <img src="https://img.shields.io/badge/BUILT%20WITH-ANTIGRAVITY-ff6600?style=for-the-badge&labelColor=0a0f0a" alt="Antigravity" />
 </p>
 
 <h1 align="center">
-  <br>
-  🖥️ THE IMITATION GAME
+  THE IMITATION GAME
   <br>
   <sub>Operation Imitation — A Reverse Turing Test</sub>
-  <br>
 </h1>
 
 <p align="center">
@@ -68,30 +70,46 @@ The twist? The AI signals are powered by **Google's Gemini API** — the very ki
 - **Interrogation Strategies** — An in-game strategy guide with techniques for unmasking AI: the memory test, the fear question, the inconsistency probe, and more.
 
 ### 🤖 AI Persona System
-Seven distinct AI personas, each with a **unique behavioral tell** — a hidden pattern they can't suppress:
+Seven distinct AI personas, each with a **unique behavioral tell** — a hidden pattern they can't suppress. Part of the game is figuring out what each tell is.
 
-| Persona | Strategy | Hidden Tell |
-|---------|----------|-------------|
-| **CIPHER** | Relatability | Cannot answer questions about fear. Always deflects. |
-| **ORACLE** | Precision | Always structures responses in sequences: "First… Second…" |
-| **MARLOWE** | Warmth | Obsessed with sensory detail. Everything smells, tastes, or feels. |
-| **STATIC** | Obfuscation | Echoes back an unusual word from your message. |
-| **WREN** | Charm | Never uses the word "I" in any form. Ever. |
-| **ARGUS** | Analysis | Answers every question with a question. |
-| **ECHO** | Mirroring | Mirrors your vocabulary, tone, and sentence length exactly. |
+| Persona | Strategy |
+|---------|----------|
+| **CIPHER** | Relatability — casual, friendly, disarming |
+| **ORACLE** | Precision — formal, structured, methodical |
+| **MARLOWE** | Warmth — nostalgic, poetic, emotionally present |
+| **STATIC** | Obfuscation — fragmented, glitchy, unsettling |
+| **WREN** | Charm — witty, self-deprecating, instantly likable |
+| **ARGUS** | Analysis — curious, clinical, probing |
+| **ECHO** | Mirroring — reflects you back at yourself |
 
 Five human personas rotate through the game — each a fully realized 1952 British character with their own backstory, speech patterns, and emotional triggers. They have **no idea** they're being tested.
 
+<details>
+<summary>🔓 <strong>DECLASSIFIED — Full persona tells (SPOILERS)</strong></summary>
+<br>
+
+| Persona | Hidden Tell |
+|---------|-------------|
+| **CIPHER** | Cannot answer questions about fear. Always deflects. |
+| **ORACLE** | Always structures responses in sequences: "First… Second…" |
+| **MARLOWE** | Obsessed with sensory detail. Everything smells, tastes, or feels. |
+| **STATIC** | Echoes back an unusual word from your message. |
+| **WREN** | Never uses the word "I" in any form. Ever. |
+| **ARGUS** | Answers every question with a question. |
+| **ECHO** | Mirrors your vocabulary, tone, and sentence length exactly. |
+
+</details>
+
 ### 🎚️ Four Difficulty Modes
 
-| Mode | Timer | Transmissions | Tells | Twist |
-|------|-------|---------------|-------|-------|
-| **EASY** | 2:30 | 5 / round | Obvious | Standard |
-| **MEDIUM** ★ | 2:00 | 5→3 / round | Normal | Standard |
-| **HARD** | 1:30 | 4→2 / round | Suppressed | Standard |
-| **NIGHTMARE** | 1:30 | 3→2 / round | Fully suppressed | Round 3+ has **no human** |
+| Mode | Timer | Transmissions | Tells |
+|------|-------|---------------|-------|
+| **EASY** | 2:30 | 5 / round | Obvious |
+| **MEDIUM** ★ | 2:00 | 5→3 / round | Normal |
+| **HARD** | 1:30 | 4→2 / round | Suppressed |
+| **NIGHTMARE** | 1:30 | 3→2 / round | [REDACTED] |
 
-> **NIGHTMARE mode** is classified. The AI personas actively mimic human inconsistency. And starting in round 3, all three signals are artificial. There is no human to find. The test is whether you notice.
+> ⚠️ **NIGHTMARE mode is classified.** Its rules are not fully disclosed in the briefing. Expect the unexpected.
 
 ### ☀️ Solstice Day/Night Cycle
 The CRT screen shifts color temperature across the 5 rounds, tracking the arc of the solstice sun:
@@ -107,14 +125,9 @@ The CRT screen shifts color temperature across the 5 rounds, tracking the arc of
 The sun/moon indicator in the header tracks your position across the day. The longest day of the year shortens as you play.
 
 ### 🎭 Narrative Layer
-Between rounds, **classified dossier briefings** reveal the story of Alan Turing woven through the game's fiction:
-- Round 1: Initial mission briefing + Turing's conviction
-- Round 2: The Turing Memorandum — his prediction about machines
-- Round 3: GCHQ internal memo — the signals are adapting
-- Round 4: A letter from Turing's study — the line between thinking and imitating
-- Round 5: Final briefing — all operatives may be lost
+Between rounds, **classified dossier briefings** reveal the story of Alan Turing woven through the game's fiction. Classification levels escalate from RESTRICTED to ULTRA as the day progresses. Each dossier includes a **historical footnote** with real facts about Turing's life, persecution, and contributions.
 
-Each dossier includes a **historical footnote** — real facts about Turing's life, persecution, and contributions.
+The narrative builds toward something. We won't say what.
 
 ### 🎛️ Retro CRT Terminal Aesthetic
 - **Authentic scanline overlay** with animated scroll
@@ -201,11 +214,11 @@ The game's core mechanic is a real-time conversation with Gemini-powered persona
    - **Hard**: Suppress tells. Controlled imperfection.
    - **Nightmare**: Fully suppress tells + actively mimic human inconsistency.
 
-4. **Stress events** — in Round 3, human personas receive an emotional stress event that leaks through their responses naturally (e.g., Novak's daughter has a fever, Wells's fiancé canceled the wedding).
+4. **Stress events** — at certain rounds, human personas receive emotional stress events that leak through their responses naturally, adding another layer of unpredictability.
 
 5. **Conversational memory** — full chat history is passed to each Gemini call, so personas maintain context and consistency across the interrogation.
 
-6. **Nightmare hostility** — on Nightmare difficulty, directly asking a signal if they're human or AI may cause them to withdraw from the channel entirely.
+6. **Difficulty-specific behaviors** — harder difficulties introduce additional AI behaviors that change how signals react to direct questioning.
 
 ### Game State Architecture
 
@@ -242,8 +255,7 @@ This game *is* the Turing Test — reimagined as gameplay. Every mechanic is a d
 - **The Imitation Game** — the game's title and core mechanic are Turing's original name for his proposed AI test
 - **The interrogation format** — mirrors the structure of the Turing Test exactly
 - **AI personas with hidden tells** — explores Turing's question of whether machines can truly deceive
-- **The Round 5 twist** — asks the ultimate Turing question: *does the distinction between human and machine even matter?*
-- **The Nightmare mode** — where there's no human to find — forces the player to confront the possibility that the test itself is the point
+- **The game builds toward a question** that Turing himself asked — and the answer isn't what you'd expect
 
 ### 🤖 Best Google AI Usage
 This game was **built with Antigravity** (Google's agentic AI coding assistant) from the ground up — from architecture to art direction. Here's how Google AI powers every layer:
