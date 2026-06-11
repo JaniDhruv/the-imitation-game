@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useRef } from 'react';
-import { DIFFICULTY_MODES, HUMAN_PERSONA_KEYS } from '../data/difficultyConfig';
+import { DIFFICULTY_MODES, HUMAN_PERSONA_KEYS, TRANSMISSION_SCHEDULE } from '../data/difficultyConfig';
 
 const GameContext = createContext();
 
@@ -50,6 +50,7 @@ export const GameProvider = ({ children }) => {
       gameStatus: 'dossier', // Show dossier first
       round: 1,
       timeRemaining: config.timerSeconds,
+      transmissionsRemaining: TRANSMISSION_SCHEDULE[difficulty][0],
       clearanceLevel: config.clearanceLevels,
       suspects: generateSuspects(1, roster),
     });
@@ -71,7 +72,7 @@ export const GameProvider = ({ children }) => {
       ...prev,
       round: nextRound,
       timeRemaining: config.timerSeconds,
-      transmissionsRemaining: 5,
+      transmissionsRemaining: TRANSMISSION_SCHEDULE[gameState.difficulty][nextRound - 1],
       gameStatus: 'dossier', // Show dossier before each round
       suspects: generateSuspects(nextRound, rosterRef.current),
       activeSuspectId: null,

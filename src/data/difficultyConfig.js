@@ -3,6 +3,13 @@
  * Defines the 4 difficulty tiers and their gameplay parameters.
  */
 
+export const TRANSMISSION_SCHEDULE = {
+  EASY:      [5, 5, 5, 5, 5],
+  MEDIUM:    [5, 5, 4, 3, 3],
+  HARD:      [4, 4, 3, 3, 2],
+  NIGHTMARE: [3, 3, 3, 2, 2],
+};
+
 export const DIFFICULTY_MODES = {
   EASY: {
     key: 'EASY',
