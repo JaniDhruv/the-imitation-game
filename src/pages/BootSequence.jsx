@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useGame } from '../context/GameContext';
+import { DIFFICULTY_MODES, DIFFICULTY_ORDER } from '../data/difficultyConfig';
 import soundEngine from '../audio/SoundEngine';
 
 const BOOT_TEXT = [
@@ -36,16 +37,23 @@ const BOOT_TEXT = [
   "▸ OBJECTIVE: IDENTIFY THE HUMAN SIGNAL",
   "▸ CLEARANCE: LEVEL 3 — 3 ERRORS PERMITTED",
   "▸ TRANSMISSIONS: 5 PER ROUND",
-  "▸ TIME LIMIT: 2 MINUTES PER ROUND",
   "",
   "DO NOT BE DECEIVED.",
 ];
+
+const DIFFICULTY_COLORS = {
+  EASY: 'var(--color-text)',
+  MEDIUM: 'var(--color-amber)',
+  HARD: 'var(--color-red)',
+  NIGHTMARE: '#ff00ff',
+};
 
 const BootSequence = () => {
   const { startGame } = useGame();
   const [lines, setLines] = useState([]);
   const [showStart, setShowStart] = useState(false);
   const [audioStarted, setAudioStarted] = useState(false);
+  const [hoveredDifficulty, setHoveredDifficulty] = useState(null);
   const lineIndexRef = useRef(0);
 
   const endOfTextRef = useRef(null);
@@ -91,11 +99,11 @@ const BootSequence = () => {
     };
   }, []);
 
-  const handleStart = () => {
+  const handleStart = (difficulty) => {
     initAudio();
     try { soundEngine.uiClick(); } catch(e) {}
     try { soundEngine.roundTransition(); } catch(e) {}
-    startGame();
+    startGame(difficulty);
   };
 
   return (
@@ -146,19 +154,60 @@ const BootSequence = () => {
         )}
         {showStart && (
           <div style={{ marginTop: '2rem', textAlign: 'center', animation: 'fadeIn 1s ease' }}>
-            <button 
-              onClick={handleStart}
-              className="text-glow"
-              style={{ 
-                fontSize: '1.4rem', 
-                padding: '1rem 2.5rem', 
-                border: '2px solid var(--color-text)',
-                animation: 'pulse-glow 2s ease-in-out infinite',
-                letterSpacing: '2px',
-              }}
-            >
-              [ INITIATE PROTOCOL ]
-            </button>
+            
+            {/* Section header */}
+            <p style={{ 
+              fontSize: '0.85em', 
+              color: 'var(--color-text-dim)', 
+              marginBottom: '1.2rem',
+              letterSpacing: '2px',
+            }}>
+              ▸ SELECT PROTOCOL LEVEL
+            </p>
+
+            {/* Difficulty selector grid */}
+            <div className="difficulty-selector">
+              {DIFFICULTY_ORDER.map((key, idx) => {
+                const mode = DIFFICULTY_MODES[key];
+                const isNightmare = key === 'NIGHTMARE';
+                const isHovered = hoveredDifficulty === key;
+
+                return (
+                  <button
+                    key={key}
+                    id={`difficulty-btn-${key.toLowerCase()}`}
+                    className={`difficulty-btn ${mode.recommended ? 'recommended' : ''} ${isNightmare ? 'nightmare' : ''}`}
+                    onClick={() => handleStart(key)}
+                    onMouseEnter={() => { setHoveredDifficulty(key); try { soundEngine.keyClick(); } catch(e) {} }}
+                    onMouseLeave={() => setHoveredDifficulty(null)}
+                    style={{
+                      animation: `fadeIn ${0.8 + idx * 0.15}s ease`,
+                      '--difficulty-color': DIFFICULTY_COLORS[key],
+                    }}
+                  >
+                    <div className="difficulty-btn-header">
+                      <span className="difficulty-btn-label" style={{ color: DIFFICULTY_COLORS[key] }}>
+                        {mode.label}
+                      </span>
+                      <span className="difficulty-btn-subtitle">
+                        {mode.subtitle}
+                      </span>
+                      {mode.recommended && (
+                        <span className="difficulty-recommended-tag">★ RECOMMENDED</span>
+                      )}
+                    </div>
+                    <p className="difficulty-btn-desc">
+                      {mode.description}
+                    </p>
+                    {/* Timer indicator */}
+                    <span className="difficulty-btn-timer">
+                      ⏱ {Math.floor(mode.timerSeconds / 60)}:{(mode.timerSeconds % 60).toString().padStart(2, '0')} / ROUND
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
             {!audioStarted && (
               <p style={{ 
                 marginTop: '1rem', 
