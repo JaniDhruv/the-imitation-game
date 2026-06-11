@@ -17,9 +17,15 @@ const apiMiddleware = () => {
         });
 
         req.on('end', async () => {
+          let data;
           try {
-            const data = JSON.parse(body);
-            const { message, persona, chatHistory, isPing, useFallback } = data;
+            data = JSON.parse(body);
+          } catch (e) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: 'Invalid JSON' }));
+            return;
+          }
+          const { message, persona, chatHistory, isPing, useFallback } = data;
 
             const env = loadEnv(server.config.mode, process.cwd(), '');
             const targetModel = useFallback ? 'gemini-3.5-flash' : (env.GEMINI_MODEL || 'gemini-3.5-flash');
@@ -147,6 +153,7 @@ CRITICAL RULES:
               parts: [{ text: msg.text }]
             }));
 
+            try {
               if (isPing) {
                 await ai.models.generateContent({
                   model: targetModel,
@@ -188,6 +195,71 @@ CRITICAL RULES:
             }
           } catch (error) {
             console.error("Gemini API Error:", error);
+            
+            // Ultimate Fallback to OpenAI-compatible API (NVIDIA NIM / Kimi)
+            const fallbackKey = env.FALLBACK_API_KEY || env.NVIDIA_API_KEY;
+            if (fallbackKey) {
+              try {
+                console.log("Attempting ultimate fallback...");
+                let fallbackUrl = env.FALLBACK_API_URL || "https://integrate.api.nvidia.com/v1/chat/completions";
+                if (!fallbackUrl.endsWith('/chat/completions')) {
+                  fallbackUrl = fallbackUrl.replace(/\/+$/, '') + '/chat/completions';
+                }
+                const fallbackModel = env.FALLBACK_MODEL || "google/gemma-2-2b-it";
+                
+                if (isPing) {
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ reply: 'OK' }));
+                  return;
+                }
+
+                let openaiMessages = (formattedHistory || []).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.parts[0].text }));
+                
+                if (openaiMessages.length > 0) {
+                  openaiMessages[0].content = `[SYSTEM INSTRUCTION: ${systemInstruction}]\n\n` + openaiMessages[0].content;
+                  openaiMessages.push({ role: "user", content: message + '\n\n[SYSTEM: Remember your persona rules. Output ONLY your character\'s spoken words.]' });
+                } else {
+                  openaiMessages.push({ role: "user", content: `[SYSTEM INSTRUCTION: ${systemInstruction}]\n\n` + message + '\n\n[SYSTEM: Remember your persona rules. Output ONLY your character\'s spoken words.]' });
+                }
+
+                const fallbackRes = await fetch(fallbackUrl, {
+                  method: "POST",
+                  headers: {
+                    "Authorization": `Bearer ${fallbackKey}`,
+                    "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify({
+                    model: fallbackModel,
+                    messages: openaiMessages,
+                    temperature: 0.7,
+                    max_tokens: 150
+                  })
+                });
+                
+                const rawText = await fallbackRes.text();
+                let fallbackData;
+                try {
+                  fallbackData = JSON.parse(rawText);
+                } catch (e) {
+                  throw new Error(`Invalid JSON from fallback API: ${rawText}`);
+                }
+                
+                if (fallbackData.choices && fallbackData.choices.length > 0) {
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ reply: fallbackData.choices[0].message.content.trim() }));
+                  return;
+                } else {
+                  throw new Error(JSON.stringify(fallbackData));
+                }
+              } catch (fallbackErr) {
+                console.error("Fallback API Error:", fallbackErr);
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: fallbackErr.message || 'All APIs exhausted' }));
+                return;
+              }
+            }
+
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ error: error.message || 'Failed to generate response' }));

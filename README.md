@@ -35,7 +35,7 @@
 
 ## 🎮 Play Now
 
-> 🔗 **Play The Imitation Game →** *(deployment link coming soon)*
+> 🔗 **Play The Imitation Game →** the-imitation-game-dj29.vercel.app
 
 Best experienced on desktop with audio enabled. Headphones recommended.
 
