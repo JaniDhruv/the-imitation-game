@@ -277,7 +277,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing message or persona' });
   }
 
-  const targetModel = useFallback ? 'gemini-3.5-flash' : (process.env.GEMINI_MODEL || 'gemini-2.0-flash');
+  const targetModel = useFallback ? 'gemini-3.5-flash' : (process.env.GEMINI_MODEL || 'gemini-3.5-flash');
 
   // Build system instruction with difficulty modifiers
   let personaPrompt = PERSONA_PROMPTS[persona] || "You are an AI.";

@@ -22,7 +22,7 @@ const apiMiddleware = () => {
             const { message, persona, chatHistory, isPing, useFallback } = data;
 
             const env = loadEnv(server.config.mode, process.cwd(), '');
-            const targetModel = useFallback ? 'gemini-3.5-flash' : (env.GEMINI_MODEL || 'gemini-2.0-flash');
+            const targetModel = useFallback ? 'gemini-3.5-flash' : (env.GEMINI_MODEL || 'gemini-3.5-flash');
 
             const ai = new GoogleGenAI({
               apiKey: env.GEMINI_API_KEY
