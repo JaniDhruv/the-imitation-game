@@ -1,9 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useGame } from '../context/GameContext';
+import { DIFFICULTY_MODES } from '../data/difficultyConfig';
 import ShareCard from '../components/ShareCard';
 import soundEngine from '../audio/SoundEngine';
 import { TURING_MEMORIAL, PERSONA_TELLS } from '../data/turingTimeline';
 import { useNavigate } from 'react-router-dom';
+
+const DIFFICULTY_BADGE_COLORS = {
+  EASY: 'var(--color-text)',
+  MEDIUM: 'var(--color-amber)',
+  HARD: 'var(--color-red)',
+  NIGHTMARE: '#ff00ff',
+};
 
 const EndingScreen = () => {
   const { gameState, startGame } = useGame();
@@ -11,6 +19,9 @@ const EndingScreen = () => {
   const [showReveal, setShowReveal] = useState(false);
   const navigate = useNavigate();
   const endOfContentRef = useRef(null);
+
+  const config = DIFFICULTY_MODES[gameState.difficulty] || DIFFICULTY_MODES.MEDIUM;
+  const isNightmare = gameState.difficulty === 'NIGHTMARE';
 
   useEffect(() => {
     if (endOfContentRef.current) {
@@ -34,14 +45,35 @@ const EndingScreen = () => {
   const getRating = () => {
     if (gameState.clearanceLevel === 0 && gameState.round < 5) return "TERMINATED";
     
-    if (gameState.correctPicks === 4) return "TURING-LEVEL";
-    if (gameState.correctPicks === 3) return "SENIOR CRYPTANALYST";
-    if (gameState.correctPicks === 2) return "ANALYST";
+    const diff = gameState.difficulty;
+    const correct = gameState.correctPicks;
+    
+    // Max possible correct depends on difficulty
+    // EASY/MEDIUM/HARD: 4 rounds with humans (rounds 1-4)
+    // NIGHTMARE: only 2 rounds with humans (rounds 1-2), rounds 3-5 are all AI
+    const maxCorrect = diff === 'NIGHTMARE' ? 2 : 4;
+    
+    if (correct >= maxCorrect) {
+      if (diff === 'HARD' || diff === 'NIGHTMARE') return "TURING-LEVEL";
+      if (diff === 'MEDIUM') return "SENIOR CRYPTANALYST";
+      return "COMPETENT ANALYST";
+    }
+    if (correct >= maxCorrect - 1) {
+      if (diff === 'HARD' || diff === 'NIGHTMARE') return "SENIOR CRYPTANALYST";
+      if (diff === 'MEDIUM') return "ANALYST";
+      return "ANALYST";
+    }
+    if (correct >= 2) return "ANALYST";
     return "ROOKIE ANALYST";
   };
 
   const isEarlyLoss = gameState.clearanceLevel === 0 && gameState.round < 5;
   const rating = getRating();
+  const diffColor = DIFFICULTY_BADGE_COLORS[gameState.difficulty] || 'var(--color-text)';
+  
+  // For nightmare: determine which rounds had no human
+  const nightmareRevealRounds = isNightmare ? 
+    gameState.roundHistory.filter(rh => rh.round >= config.twistRound).map(rh => rh.round) : [];
 
   return (
     <div 
@@ -178,8 +210,10 @@ const EndingScreen = () => {
               textAlign: 'left',
               fontSize: '0.9rem',
             }}>
+              <span style={{ color: 'var(--color-text-dim)' }}>PROTOCOL:</span>
+              <span style={{ color: diffColor }}>{gameState.difficulty}</span>
               <span style={{ color: 'var(--color-text-dim)' }}>CORRECT IDENTIFICATIONS:</span>
-              <span>{gameState.correctPicks}/4</span>
+              <span>{gameState.correctPicks}/{isNightmare ? 2 : 4}</span>
               <span style={{ color: 'var(--color-text-dim)' }}>CLEARANCE REMAINING:</span>
               <span>{gameState.clearanceLevel}/3</span>
               <span style={{ color: 'var(--color-text-dim)' }}>ROUNDS COMPLETED:</span>
@@ -204,6 +238,29 @@ const EndingScreen = () => {
                 {rating}
               </span>
             </div>
+
+            {/* Nightmare twist reveal */}
+            {isNightmare && nightmareRevealRounds.length > 0 && (
+              <div style={{
+                marginTop: '1.5rem',
+                padding: '1rem',
+                border: '1px solid #ff00ff',
+                animation: 'fadeIn 1s ease',
+              }}>
+                <p style={{ color: '#ff00ff', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                  ⚠ CLASSIFIED INTEL — NIGHTMARE PROTOCOL
+                </p>
+                <p style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem', lineHeight: '1.5' }}>
+                  THERE WAS NO HUMAN IN ROUNDS {nightmareRevealRounds.join(', ')}.
+                  <br/>
+                  THE TEST WAS WHETHER YOU'D NOTICE.
+                  <br/><br/>
+                  <span style={{ color: 'var(--color-amber)', fontStyle: 'italic' }}>
+                    "THE QUESTION IS NOT WHETHER MACHINES CAN THINK — BUT WHETHER WE CAN TELL THE DIFFERENCE."
+                  </span>
+                </p>
+              </div>
+            )}
 
             {/* Round-by-round reveal toggle */}
             <div style={{ marginTop: '1.5rem' }}>
@@ -230,63 +287,68 @@ const EndingScreen = () => {
                 }}>
                   DECLASSIFIED — SIGNAL ANALYSIS
                 </h3>
-                {gameState.roundHistory.map((rh, i) => (
-                  <div key={i} style={{ 
-                    marginBottom: '1.2rem', 
-                    padding: '0.8rem',
-                    border: '1px solid var(--color-text-dim)',
-                    animation: `fadeIn ${0.3 + i * 0.2}s ease`,
-                  }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      marginBottom: '0.5rem',
-                      color: rh.correct ? 'var(--color-text)' : 'var(--color-red)',
+                {gameState.roundHistory.map((rh, i) => {
+                  const isAllAIRound = rh.round >= config.twistRound;
+                  return (
+                    <div key={i} style={{ 
+                      marginBottom: '1.2rem', 
+                      padding: '0.8rem',
+                      border: `1px solid ${isAllAIRound ? '#ff00ff33' : 'var(--color-text-dim)'}`,
+                      animation: `fadeIn ${0.3 + i * 0.2}s ease`,
                     }}>
-                      <span>ROUND {rh.round}</span>
-                      <span>{rh.correct ? '✓ CORRECT' : '✗ INCORRECT'}</span>
-                    </div>
-                    {rh.suspects.map((s) => {
-                      const tell = PERSONA_TELLS[s.persona];
-                      const wasVoted = s.id === rh.votedId;
-                      return (
-                        <div key={s.id} style={{ 
-                          marginBottom: '0.5rem',
-                          padding: '0.4rem 0.6rem',
-                          borderLeft: wasVoted ? '3px solid var(--color-amber)' : '3px solid transparent',
-                          background: wasVoted ? 'rgba(255,176,0,0.05)' : 'transparent',
-                          fontSize: '0.8rem',
-                        }}>
-                          <div style={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between',
-                            color: s.isHuman ? 'var(--color-text)' : 'var(--color-red)',
+                      <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        marginBottom: '0.5rem',
+                        color: isAllAIRound ? '#ff00ff' : (rh.correct ? 'var(--color-text)' : 'var(--color-red)'),
+                      }}>
+                        <span>ROUND {rh.round}</span>
+                        <span>
+                          {isAllAIRound ? '⚠ ALL AI' : (rh.correct ? '✓ CORRECT' : '✗ INCORRECT')}
+                        </span>
+                      </div>
+                      {rh.suspects.map((s) => {
+                        const tell = PERSONA_TELLS[s.persona];
+                        const wasVoted = s.id === rh.votedId;
+                        return (
+                          <div key={s.id} style={{ 
+                            marginBottom: '0.5rem',
+                            padding: '0.4rem 0.6rem',
+                            borderLeft: wasVoted ? '3px solid var(--color-amber)' : '3px solid transparent',
+                            background: wasVoted ? 'rgba(255,176,0,0.05)' : 'transparent',
+                            fontSize: '0.8rem',
                           }}>
-                            <span>{s.id}</span>
+                            <div style={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between',
+                              color: s.isHuman ? 'var(--color-text)' : 'var(--color-red)',
+                            }}>
+                              <span>{s.id}</span>
+                            </div>
+                            {tell && (
+                              <p style={{ 
+                                color: 'var(--color-text-dim)', 
+                                fontSize: '0.75rem', 
+                                marginTop: '0.3rem',
+                                lineHeight: '1.4',
+                              }}>
+                                TELL: {tell.tell}
+                              </p>
+                            )}
+                            {wasVoted && (
+                              <span style={{ 
+                                fontSize: '0.7rem', 
+                                color: 'var(--color-amber)',
+                              }}>
+                                ← YOUR PICK
+                              </span>
+                            )}
                           </div>
-                          {tell && (
-                            <p style={{ 
-                              color: 'var(--color-text-dim)', 
-                              fontSize: '0.75rem', 
-                              marginTop: '0.3rem',
-                              lineHeight: '1.4',
-                            }}>
-                              TELL: {tell.tell}
-                            </p>
-                          )}
-                          {wasVoted && (
-                            <span style={{ 
-                              fontSize: '0.7rem', 
-                              color: 'var(--color-amber)',
-                            }}>
-                              ← YOUR PICK
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
+                        );
+                      })}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -298,6 +360,7 @@ const EndingScreen = () => {
               clearanceLevel: gameState.clearanceLevel,
               totalTransmissionsUsed: gameState.totalTransmissionsUsed,
               totalTimeUsed: gameState.totalTimeUsed,
+              difficulty: gameState.difficulty,
             }} />
 
             {/* Play Again */}
@@ -305,7 +368,6 @@ const EndingScreen = () => {
               <button 
                 onClick={() => { 
                   soundEngine.uiClick();
-                  startGame(); 
                   navigate('/'); 
                 }}
                 style={{ 

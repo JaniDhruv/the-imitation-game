@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useGame } from '../context/GameContext';
+import { DIFFICULTY_MODES } from '../data/difficultyConfig';
 import SuspectPanel from '../components/SuspectPanel';
 import ControlPanel from '../components/ControlPanel';
 import EvidenceBoard from '../components/EvidenceBoard';
@@ -10,8 +11,15 @@ import useSolsticeTheme from '../hooks/useSolsticeTheme';
 import soundEngine from '../audio/SoundEngine';
 import { useNavigate } from 'react-router-dom';
 
+const DIFFICULTY_BADGE_COLORS = {
+  EASY: 'var(--color-text)',
+  MEDIUM: 'var(--color-amber)',
+  HARD: 'var(--color-red)',
+  NIGHTMARE: '#ff00ff',
+};
+
 const GameTerminal = () => {
-  const { gameState, updateTime, advanceRound, decreaseClearance, setGameState, recordRoundStats, dismissDossier } = useGame();
+  const { gameState, updateTime, advanceRound, decreaseClearance, setGameState, recordRoundStats, dismissDossier, getDifficultyConfig } = useGame();
   const navigate = useNavigate();
   const theme = useSolsticeTheme(gameState.round);
 
@@ -20,6 +28,8 @@ const GameTerminal = () => {
   const [showTwistMessage, setShowTwistMessage] = useState(false);
   const [twistStage, setTwistStage] = useState(0);
   const lastTickRef = useRef(null);
+
+  const config = getDifficultyConfig(gameState.difficulty);
 
   // Timer Logic
   useEffect(() => {
@@ -90,25 +100,42 @@ const GameTerminal = () => {
     return labels[round - 1] || "";
   };
 
+  /**
+   * Determine if this round is an all-AI twist round.
+   * For NIGHTMARE, twist starts at round 3.
+   * For all modes, round 5 is always all-AI.
+   */
+  const isTwistRound = (round) => {
+    return round >= config.twistRound;
+  };
+
   const handleVote = (suspectId) => {
     const suspect = gameState.suspects.find(s => s.id === suspectId);
     
-    if (gameState.round === 5) {
-      // Round 5: The twist — all are AI
+    if (isTwistRound(gameState.round)) {
+      // Twist round — all are AI
       recordRoundStats(false, suspectId);
       soundEngine.suspenseDrone(5);
       
-      // Start the twist sequence
-      setShowTwistMessage(true);
-      setTwistStage(1);
+      if (gameState.round === 5 || (config.twistRound < 5 && gameState.round === config.twistRound)) {
+        // Show the twist reveal sequence on the FIRST twist round
+        setShowTwistMessage(true);
+        setTwistStage(1);
+        
+        setTimeout(() => setTwistStage(2), 2500);
+        setTimeout(() => setTwistStage(3), 5000);
+        setTimeout(() => {
+          setGlitchTrigger(g => g + 1);
+          setGameState(prev => ({ ...prev, gameStatus: 'ending_sequence' }));
+          setTimeout(() => navigate('/ending'), 2000);
+        }, 7500);
+        return;
+      }
       
-      setTimeout(() => setTwistStage(2), 2500);
-      setTimeout(() => setTwistStage(3), 5000);
-      setTimeout(() => {
-        setGlitchTrigger(g => g + 1);
-        setGameState(prev => ({ ...prev, gameStatus: 'ending_sequence' }));
-        setTimeout(() => navigate('/ending'), 2000);
-      }, 7500);
+      // For Nightmare subsequent twist rounds (4, 5): just treat as wrong
+      // The player doesn't know there's no human — they think they picked wrong
+      setGlitchTrigger(g => g + 1);
+      decreaseClearance();
       return;
     }
 
@@ -135,7 +162,7 @@ const GameTerminal = () => {
   const renderStatusModal = () => {
     if (gameState.gameStatus === 'playing' || gameState.gameStatus === 'dossier') return null;
 
-    // Round 5 twist sequence
+    // Twist sequence (first twist round reveal)
     if (showTwistMessage) {
       return (
         <div style={{
@@ -279,6 +306,7 @@ const GameTerminal = () => {
   // Solstice progress bar — sun/moon position
   const clockProgress = (gameState.round / 5) * 100;
   const sunChar = gameState.round <= 3 ? '☀' : gameState.round === 4 ? '☀' : '☾';
+  const diffBadgeColor = DIFFICULTY_BADGE_COLORS[gameState.difficulty] || 'var(--color-text)';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', padding: '10px' }}>
@@ -308,6 +336,13 @@ const GameTerminal = () => {
         </div>
         <div>
           ROUND {gameState.round}/5 — {getSolsticeLabel(gameState.round)}
+        </div>
+        {/* Difficulty badge */}
+        <div className={`difficulty-badge ${gameState.difficulty === 'NIGHTMARE' ? 'nightmare' : ''}`} style={{
+          color: diffBadgeColor,
+          borderColor: diffBadgeColor,
+        }}>
+          {gameState.difficulty}
         </div>
         <div style={{ 
           color: gameState.timeRemaining < 20 ? 'var(--color-red)' : 

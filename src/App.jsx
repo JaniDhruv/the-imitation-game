@@ -7,7 +7,7 @@ import EndingScreen from './pages/EndingScreen'
 import soundEngine from './audio/SoundEngine'
 
 function App() {
-  const { gameState } = useGame();
+  const { gameState, setGameState } = useGame();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMuted, setIsMuted] = useState(false);
@@ -28,6 +28,13 @@ function App() {
       navigate(targetPath, { replace: true });
     }
   }, [gameState.gameStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When navigating back to '/' (e.g., Play Again), reset to booting state
+  useEffect(() => {
+    if (location.pathname === '/' && gameState.gameStatus !== 'booting') {
+      setGameState(prev => ({ ...prev, gameStatus: 'booting' }));
+    }
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleToggleSound = useCallback(() => {
     soundEngine.ensureContext();
