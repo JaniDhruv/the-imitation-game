@@ -49,9 +49,10 @@ const DIFFICULTY_COLORS = {
 };
 
 const BootSequence = () => {
-  const { startGame } = useGame();
+  const { startGame, pingAPI } = useGame();
   const [lines, setLines] = useState([]);
   const [showStart, setShowStart] = useState(false);
+  const [pingStatus, setPingStatus] = useState('checking');
   const [audioStarted, setAudioStarted] = useState(false);
   const [hoveredDifficulty, setHoveredDifficulty] = useState(null);
   const lineIndexRef = useRef(0);
@@ -73,6 +74,14 @@ const BootSequence = () => {
   }, [audioStarted]);
 
   useEffect(() => {
+    pingAPI().then(status => {
+      if (status === 'fatal') {
+        setPingStatus('error');
+      } else {
+        setPingStatus('ok');
+      }
+    });
+
     lineIndexRef.current = 0;
     setLines([]);
     setShowStart(false);
@@ -153,7 +162,20 @@ const BootSequence = () => {
         {!showStart && lines.length > 0 && lines.length < BOOT_TEXT.length && (
           <span className="text-glow" style={{ animation: 'blink 0.5s infinite' }}>█</span>
         )}
-        {showStart && (
+        {showStart && pingStatus === 'checking' && (
+          <p style={{ color: 'var(--color-amber)', textAlign: 'center', marginTop: '2rem', animation: 'blink 1s infinite' }}>
+            ESTABLISHING SECURE SATELLITE LINK... [WAIT]
+          </p>
+        )}
+        {showStart && pingStatus === 'error' && (
+          <div style={{ marginTop: '2rem', textAlign: 'center', animation: 'fadeIn 1s ease', color: 'var(--color-red)' }}>
+            <p style={{ marginBottom: '1rem', letterSpacing: '2px' }}>⚠ CRITICAL ERROR</p>
+            <p>ALL SATELLITE LINKS ARE CURRENTLY OVERLOADED.</p>
+            <p>THE AI MODELS ARE EXPERIENCING UNPRECEDENTED DEMAND.</p>
+            <p style={{ marginTop: '1rem' }}>PLEASE ATTEMPT TRANSMISSION LATER.</p>
+          </div>
+        )}
+        {showStart && pingStatus === 'ok' && (
           <div style={{ marginTop: '2rem', textAlign: 'center', animation: 'fadeIn 1s ease' }}>
 
             {/* Section header */}

@@ -24,6 +24,7 @@ const INITIAL_STATE = {
 
 export const GameProvider = ({ children }) => {
   const [gameState, setGameState] = useState(INITIAL_STATE);
+  const [activeModel, setActiveModel] = useState('env');
   const [evidenceNotes, setEvidenceNotes] = useState(() => {
     const saved = sessionStorage.getItem('operation_imitation_notes');
     return saved ? JSON.parse(saved) : {};
@@ -37,6 +38,34 @@ export const GameProvider = ({ children }) => {
     });
   };
   const rosterRef = useRef(null);
+
+  const pingAPI = async () => {
+    try {
+      const res = await fetch('/api/transmit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPing: true, useFallback: false })
+      });
+      const data = await res.json();
+      if (data.error && data.error.includes('503')) {
+        const fallbackRes = await fetch('/api/transmit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isPing: true, useFallback: true })
+        });
+        const fallbackData = await fallbackRes.json();
+        if (fallbackData.error && fallbackData.error.includes('503')) {
+          return 'fatal';
+        }
+        setActiveModel('fallback');
+        return 'fallback';
+      }
+      setActiveModel('env');
+      return 'env';
+    } catch (err) {
+      return 'fatal';
+    }
+  };
 
   const getDifficultyConfig = (diff) => DIFFICULTY_MODES[diff || gameState.difficulty] || DIFFICULTY_MODES.MEDIUM;
 
@@ -173,6 +202,8 @@ export const GameProvider = ({ children }) => {
   return (
     <GameContext.Provider value={{
       gameState,
+      activeModel,
+      pingAPI,
       startGame,
       advanceRound,
       decreaseClearance,

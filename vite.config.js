@@ -19,9 +19,10 @@ const apiMiddleware = () => {
         req.on('end', async () => {
           try {
             const data = JSON.parse(body);
-            const { message, persona, chatHistory } = data;
+            const { message, persona, chatHistory, isPing, useFallback } = data;
 
             const env = loadEnv(server.config.mode, process.cwd(), '');
+            const targetModel = useFallback ? 'gemini-3.5-flash' : (env.GEMINI_MODEL || 'gemini-2.0-flash');
 
             const ai = new GoogleGenAI({
               apiKey: env.GEMINI_API_KEY
@@ -146,18 +147,30 @@ CRITICAL RULES:
               parts: [{ text: msg.text }]
             }));
 
-            const response = await ai.models.generateContent({
-              model: env.GEMINI_MODEL || 'gemini-3.5-flash',
-              contents: [
-                ...formattedHistory,
-                { role: 'user', parts: [{ text: message + '\n\n[SYSTEM: Remember your persona rules. Output ONLY your character\'s spoken words.]' }] }
-              ],
-              config: {
-                systemInstruction: systemInstruction,
-                temperature: 0.7,
-                maxOutputTokens: 2048
+            try {
+              if (isPing) {
+                await ai.models.generateContent({
+                  model: targetModel,
+                  contents: [{ role: 'user', parts: [{ text: "Ping. Reply with OK." }] }],
+                  config: { maxOutputTokens: 10 }
+                });
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ reply: 'OK' }));
+                return;
               }
-            });
+
+              const response = await ai.models.generateContent({
+                model: targetModel,
+                contents: [
+                  ...formattedHistory,
+                  { role: 'user', parts: [{ text: message + '\n\n[SYSTEM: Remember your persona rules. Output ONLY your character\'s spoken words.]' }] }
+                ],
+                config: {
+                  systemInstruction: systemInstruction,
+                  temperature: 0.7,
+                  maxOutputTokens: 2048
+                }
+              });
 
             res.setHeader('Content-Type', 'application/json');
 

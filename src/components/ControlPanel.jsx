@@ -3,7 +3,7 @@ import { useGame } from '../context/GameContext';
 import soundEngine from '../audio/SoundEngine';
 
 const ControlPanel = () => {
-  const { gameState, addMessageToSuspect, decrementTransmissions, getDifficultyConfig, withdrawSuspect } = useGame();
+  const { gameState, addMessageToSuspect, decrementTransmissions, getDifficultyConfig, withdrawSuspect, activeModel } = useGame();
   const [inputMessage, setInputMessage] = useState('');
   const [isTransmitting, setIsTransmitting] = useState(false);
   const inputRef = useRef(null);
@@ -86,6 +86,7 @@ const ControlPanel = () => {
           tellMode: config.tellMode,
           round: gameState.round,
           difficulty: gameState.difficulty,
+          useFallback: activeModel === 'fallback'
         }),
         signal: abortControllerRef.current.signal
       });

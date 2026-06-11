@@ -271,11 +271,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { message, persona, chatHistory, tellMode, round, difficulty } = req.body;
+  const { message, persona, chatHistory, tellMode, round, difficulty, isPing, useFallback } = req.body;
 
-  if (!message || !persona) {
+  if (!isPing && (!message || !persona)) {
     return res.status(400).json({ error: 'Missing message or persona' });
   }
+
+  const targetModel = useFallback ? 'gemini-3.5-flash' : (process.env.GEMINI_MODEL || 'gemini-2.0-flash');
 
   // Build system instruction with difficulty modifiers
   let personaPrompt = PERSONA_PROMPTS[persona] || "You are an AI.";
@@ -312,8 +314,17 @@ Do not announce it. Let it leak through naturally if it does.`;
   }));
 
   try {
+    if (isPing) {
+      const pingResponse = await ai.models.generateContent({
+        model: targetModel,
+        contents: [{ role: 'user', parts: [{ text: "Ping. Reply with OK." }] }],
+        config: { maxOutputTokens: 10 }
+      });
+      return res.status(200).json({ reply: 'OK' });
+    }
+
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+      model: targetModel,
       contents: [
         ...formattedHistory,
         { role: 'user', parts: [{ text: message }] }
@@ -336,6 +347,7 @@ Do not announce it. Let it leak through naturally if it does.`;
     res.status(200).json({ reply: replyText });
   } catch (error) {
     console.error("Gemini API Error:", error);
-    res.status(200).json({ reply: '[CORRUPTED SIGNAL - INTERFERENCE DETECTED]' });
+    // Return the actual error so the client can detect 503
+    res.status(500).json({ error: error.message || 'Failed to generate response' });
   }
 }
