@@ -6,6 +6,10 @@
   --color-text-dim: #1a8000;
   --color-amber: #ffb000; /* For alternative highlights */
   --color-red: #ff3333; /* For errors/clearance revoked */
+  --color-glow: #33ff00;
+  --scanline-opacity: 0.2;
+  --vignette-strength: 0.3;
+  --flicker-intensity: 0.015;
   
   --font-main: 'VT323', monospace;
   --font-mono: 'Courier Prime', monospace;
@@ -25,9 +29,14 @@ body {
   line-height: 1.2;
   overflow: hidden; /* Prevent scrolling, keep it terminal-like */
   text-transform: uppercase;
+  transition: background-color 2s ease, color 2s ease;
 }
 
-/* CRT Screen Effect overlay */
+/* ═══════════════════════════════════════════
+   CRT Screen Effects
+   ═══════════════════════════════════════════ */
+
+/* Scanlines — animated slow scroll */
 .crt::before {
   content: " ";
   display: block;
@@ -36,12 +45,24 @@ body {
   left: 0;
   bottom: 0;
   right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background: 
+    linear-gradient(
+      rgba(18, 16, 16, 0) 50%, 
+      rgba(0, 0, 0, var(--scanline-opacity)) 50%
+    ), 
+    linear-gradient(
+      90deg, 
+      rgba(255, 0, 0, 0.04), 
+      rgba(0, 255, 0, 0.02), 
+      rgba(0, 0, 255, 0.04)
+    );
   z-index: 2;
   background-size: 100% 2px, 3px 100%;
   pointer-events: none;
+  animation: scanline-scroll 8s linear infinite;
 }
 
+/* Vignette + screen curvature */
 .crt::after {
   content: " ";
   display: block;
@@ -50,27 +71,49 @@ body {
   left: 0;
   bottom: 0;
   right: 0;
-  background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.4) 100%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0,0,0,0) 55%,
+    rgba(0,0,0, var(--vignette-strength)) 85%,
+    rgba(0,0,0, 0.7) 100%
+  );
   z-index: 3;
   pointer-events: none;
 }
 
-/* Glowing text */
+/* Screen flicker */
+.crt {
+  animation: flicker 0.15s infinite alternate;
+}
+
+/* ═══════════════════════════════════════════
+   Glowing Text & Color Classes
+   ═══════════════════════════════════════════ */
+
 .text-glow {
-  text-shadow: 0 0 4px var(--color-text);
+  text-shadow: 
+    0 0 4px var(--color-glow),
+    0 0 8px rgba(51, 255, 0, 0.2);
 }
 
 .text-amber {
   color: var(--color-amber);
-  text-shadow: 0 0 4px var(--color-amber);
+  text-shadow: 
+    0 0 4px var(--color-amber),
+    0 0 8px rgba(255, 176, 0, 0.2);
 }
 
 .text-red {
   color: var(--color-red);
-  text-shadow: 0 0 4px var(--color-red);
+  text-shadow: 
+    0 0 4px var(--color-red),
+    0 0 8px rgba(255, 51, 51, 0.2);
 }
 
-/* Stamped Text Effect */
+/* ═══════════════════════════════════════════
+   Stamped Text Effect
+   ═══════════════════════════════════════════ */
+
 .stamped {
   border: 4px solid;
   padding: 0.5rem 1rem;
@@ -89,9 +132,19 @@ body {
   border-color: var(--color-text);
 }
 
-/* Custom Scrollbar */
+/* ═══════════════════════════════════════════
+   Custom Scrollbar
+   ═══════════════════════════════════════════ */
+
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 ::-webkit-scrollbar-track {
   background: var(--color-bg);
@@ -99,12 +152,16 @@ body {
 }
 ::-webkit-scrollbar-thumb {
   background: var(--color-text-dim);
+  border-radius: 0;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text);
 }
 
-/* Base styles for buttons and inputs */
+/* ═══════════════════════════════════════════
+   Base Styles — Buttons & Inputs
+   ═══════════════════════════════════════════ */
+
 button, input {
   font-family: inherit;
   font-size: inherit;
@@ -128,15 +185,23 @@ button {
   border: 1px solid var(--color-text);
   padding: 5px 15px;
   transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
 }
 button:hover {
   background: var(--color-text);
   color: var(--color-bg);
+  text-shadow: none;
+  box-shadow: 0 0 12px var(--color-glow);
+}
+button:active {
+  transform: scale(0.97);
 }
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
   border-color: var(--color-text-dim);
+  box-shadow: none;
 }
 
 #root {
@@ -144,4 +209,144 @@ button:disabled {
   height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* ═══════════════════════════════════════════
+   Animations
+   ═══════════════════════════════════════════ */
+
+@keyframes flicker {
+  0% { opacity: 1; }
+  50% { opacity: calc(1 - var(--flicker-intensity)); }
+  100% { opacity: 1; }
+}
+
+@keyframes scanline-scroll {
+  0% { background-position: 0 0, 0 0; }
+  100% { background-position: 0 100%, 0 0; }
+}
+
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse-dim {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { 
+    text-shadow: 0 0 4px var(--color-glow);
+    opacity: 0.8;
+  }
+  50% { 
+    text-shadow: 0 0 12px var(--color-glow), 0 0 20px var(--color-glow);
+    opacity: 1;
+  }
+}
+
+@keyframes glitch-chromatic {
+  0% { box-shadow: 2px 0 rgba(255,0,0,0.3), -2px 0 rgba(0,255,0,0.3); }
+  25% { box-shadow: -1px 0 rgba(255,0,0,0.3), 1px 0 rgba(0,0,255,0.3); }
+  50% { box-shadow: 3px 0 rgba(0,255,0,0.3), -3px 0 rgba(255,0,0,0.3); }
+  75% { box-shadow: -2px 0 rgba(0,0,255,0.3), 2px 0 rgba(0,255,0,0.3); }
+  100% { box-shadow: 1px 0 rgba(255,0,0,0.3), -1px 0 rgba(0,255,0,0.3); }
+}
+
+@keyframes typeIn {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes stamp-in {
+  0% { transform: rotate(-5deg) scale(3); opacity: 0; }
+  60% { transform: rotate(-5deg) scale(0.95); opacity: 0.9; }
+  100% { transform: rotate(-5deg) scale(1); opacity: 0.8; }
+}
+
+/* Timer bar animation */
+@keyframes timer-pulse {
+  0%, 100% { box-shadow: 0 0 4px var(--color-red); }
+  50% { box-shadow: 0 0 12px var(--color-red), 0 0 20px rgba(255,51,51,0.3); }
+}
+
+/* Suspect panel hover glow */
+.suspect-panel {
+  transition: all 0.3s ease;
+}
+.suspect-panel:hover {
+  box-shadow: 0 0 8px rgba(51, 255, 0, 0.15);
+}
+.suspect-panel.active {
+  box-shadow: 0 0 15px rgba(51, 255, 0, 0.25);
+}
+
+/* ═══════════════════════════════════════════
+   Responsive — Mobile Layout
+   ═══════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  body {
+    font-size: 16px;
+  }
+
+  .game-header {
+    flex-direction: column !important;
+    gap: 5px !important;
+    font-size: 0.85em;
+  }
+
+  .game-main {
+    flex-direction: column !important;
+  }
+
+  .suspects-container {
+    flex-direction: column !important;
+    flex: none !important;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  .sidebar {
+    flex: none !important;
+    max-height: 30vh;
+  }
+
+  .suspect-panel {
+    min-height: 200px;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Sound Toggle Button
+   ═══════════════════════════════════════════ */
+
+.sound-toggle {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  z-index: 50;
+  background: transparent;
+  border: 1px solid var(--color-text-dim) !important;
+  padding: 4px 8px !important;
+  font-size: 0.7em;
+  opacity: 0.5;
+  transition: opacity 0.3s;
+}
+.sound-toggle:hover {
+  opacity: 1;
+  background: transparent !important;
+  color: var(--color-text) !important;
 }
