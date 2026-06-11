@@ -219,6 +219,6 @@ export const TURING_MEMORIAL = {
   ],
   finalQuote: {
     text: 'Sometimes it is the people no one imagines anything of who do the things no one can imagine.',
-    note: 'The machines he imagined now speak for themselves. This game — built with AI, about AI, questioning AI — exists because of him.',
+    note: 'The machines he imagined now speak for themselves. This game exists because of him.',
   },
 };

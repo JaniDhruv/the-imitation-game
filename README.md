@@ -35,7 +35,7 @@
 
 ## 🎮 Play Now
 
-> 🔗 **[Play The Imitation Game →](https://the-imitation-game.vercel.app)**
+> 🔗 **Play The Imitation Game →** *(deployment link coming soon)*
 
 Best experienced on desktop with audio enabled. Headphones recommended.
 
@@ -337,7 +337,7 @@ For deployment on **Vercel**, the `api/transmit.js` serverless function handles 
 
 He broke the Enigma code. He invented the concept of the universal computing machine. He proposed the test we're still debating today. He was punished for being himself. He was pardoned 59 years after his death. He appears on the £50 note. The highest honor in computing bears his name.
 
-The machines he imagined now speak for themselves. This game — built with AI, about AI, questioning AI — exists because of him.
+The machines he imagined now speak for themselves. This game exists because of him.
 
 ---
 
