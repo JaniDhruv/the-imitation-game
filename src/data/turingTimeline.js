@@ -105,6 +105,10 @@ GOOD LUCK.`,
 /** Strategy tips for the evidence board */
 export const INTERROGATION_STRATEGIES = [
   {
+    title: '⚠ DON\'T WASTE YOUR OPENING',
+    tip: 'WEAK: "hi", "hello", "are you human?" — these tell you nothing. STRONG: "describe where you\'re sitting right now", "what kept you up last night?", "tell me something that went wrong today." Specific questions force specific answers. That\'s where the cracks show.',
+  },
+  {
     title: 'THE MEMORY TEST',
     tip: 'Ask about a specific personal memory with sensory detail. Where were they? What did it smell like? Machines struggle with embodied experience.',
   },
@@ -136,6 +140,26 @@ export const PERSONA_TELLS = {
     role: 'HUMAN — Field Operative',
     tell: 'No tell. Daniel Novak is a real person — a tired radio operator who just became a father. He had no idea he was being tested.',
     detail: 'Novak is irritable, distracted, uses British slang, references his newborn daughter Eleanor, and gets offended if you question his humanity.',
+  },
+  WELLS: {
+    role: 'HUMAN — Switchboard Operator',
+    tell: 'No tell. Margaret Wells is a real person — newly engaged and barely paying attention to the transmission check.',
+    detail: 'Wells is scatter-brained, jumps between topics, keeps bringing up her wedding plans and fiancé Robert. Gets flustered under pressure.',
+  },
+  CARR: {
+    role: 'HUMAN — Night Watchman',
+    tell: 'No tell. James Carr is a real person — a stoic widower tending his night shift and his allotment garden.',
+    detail: 'Carr is dry, gruff, a man of few words. Sometimes refers to his late wife Dorothy in present tense. Uses Welsh expressions. Shuts down if pushed emotionally.',
+  },
+  SHAW: {
+    role: 'HUMAN — Admin Clerk',
+    tell: 'No tell. Edith Shaw is a real person — a former nurse carrying quiet grief for her brother William.',
+    detail: 'Shaw stammers in text — starts sentences, abandons them, restarts. Articulate but fragmented. Goes formal and distant when pushed about the war.',
+  },
+  FLEET: {
+    role: 'HUMAN — Junior Messenger',
+    tell: 'No tell. Thomas Fleet is a real person — a nervous 19-year-old on his first real job, trying not to mess up.',
+    detail: 'Fleet tries to sound professional but keeps slipping into youthful slang. References his mum, his packed lunch, being new. Panics and over-apologises under pressure.',
   },
   CIPHER: {
     role: 'AI — Strategy: Relatability',
