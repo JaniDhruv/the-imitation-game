@@ -4,12 +4,12 @@ import { DIFFICULTY_MODES, DIFFICULTY_ORDER } from '../data/difficultyConfig';
 import soundEngine from '../audio/SoundEngine';
 
 const BOOT_TEXT = [
-  "█▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█",
-  "█  G.C.H.Q. SECURE TERMINAL — CHELTENHAM      █",
-  "█  MODEL: COLOSSUS MK.IV — SERIAL: CT-1952-621 █",
-  "█▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█",
+  "+----------------------------------------------+",
+  "|  G.C.H.Q. SECURE TERMINAL - CHELTENHAM       |",
+  "|  MODEL: COLOSSUS MK.IV - SERIAL: CT-1952-621 |",
+  "+----------------------------------------------+",
   "",
-  "BOOT SEQUENCE INITIATED .............. [OK]",
+  "BOOT SEQUENCE INITIATED ............... [OK]",
   "LOADING CRYPTANALYTIC PROTOCOLS ....... [OK]",
   "ESTABLISHING SECURE CONNECTIONS ....... [OK]",
   "SIGNALS INTELLIGENCE MODULE ........... [ACTIVE]",
@@ -82,10 +82,10 @@ const BootSequence = () => {
       if (idx < BOOT_TEXT.length) {
         const line = BOOT_TEXT[idx];
         setLines(prev => [...prev, line]);
-        
+
         // Boot beep for certain lines
         if (line.includes('[OK]') || line.includes('[ACTIVE]') || line.includes('[ELEVATED]')) {
-          try { soundEngine.bootBeep(idx); } catch(e) { /* audio not ready */ }
+          try { soundEngine.bootBeep(idx); } catch (e) { /* audio not ready */ }
         }
         lineIndexRef.current = idx + 1;
       } else {
@@ -101,49 +101,50 @@ const BootSequence = () => {
 
   const handleStart = (difficulty) => {
     initAudio();
-    try { soundEngine.uiClick(); } catch(e) {}
-    try { soundEngine.roundTransition(); } catch(e) {}
+    try { soundEngine.uiClick(); } catch (e) { }
+    try { soundEngine.roundTransition(); } catch (e) { }
     startGame(difficulty);
   };
 
   return (
-    <div 
+    <div
       onClick={initAudio}
-      style={{ 
-        padding: '2rem', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        height: '100%', 
-        justifyContent: 'center', 
+      style={{
+        padding: '2rem',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        justifyContent: 'center',
         alignItems: 'center',
         cursor: audioStarted ? 'default' : 'pointer',
       }}
     >
-      <div 
+      <div
         className="no-scrollbar"
-        style={{ 
-        width: '90%', 
-        maxWidth: '750px', 
-        textAlign: 'left',
-        maxHeight: '80vh',
-        overflowY: 'auto',
-      }}>
+        style={{
+          width: '90%',
+          maxWidth: '750px',
+          textAlign: 'left',
+          maxHeight: '80vh',
+          overflowY: 'auto',
+        }}>
         {lines.map((line, i) => (
-          <p 
-            key={i} 
-            style={{ 
-              marginBottom: '0.3rem', 
+          <p
+            key={i}
+            style={{
+              marginBottom: '0.3rem',
               minHeight: '1.2em',
               animation: 'fadeIn 0.3s ease',
-              color: line.includes('⚠') ? 'var(--color-amber)' : 
-                     line.includes('━') ? 'var(--color-text-dim)' :
-                     line.includes('█') ? 'var(--color-text-dim)' :
-                     line.includes('TURING') ? 'var(--color-amber)' :
-                     line.includes('CRIME') ? 'var(--color-red)' :
-                     line.includes('▸') ? 'var(--color-text)' :
-                     'inherit',
+              color: line.includes('⚠') ? 'var(--color-amber)' :
+                line.includes('━') ? 'var(--color-text-dim)' :
+                  line.includes('█') ? 'var(--color-text-dim)' :
+                    line.includes('TURING') ? 'var(--color-amber)' :
+                      line.includes('CRIME') ? 'var(--color-red)' :
+                        line.includes('▸') ? 'var(--color-text)' :
+                          'inherit',
               fontStyle: line.includes('"') ? 'italic' : 'normal',
-            }} 
+              whiteSpace: 'pre',
+            }}
             className={line.includes('▸') || line.includes('[') ? 'text-glow' : ''}
           >
             {line}
@@ -154,11 +155,11 @@ const BootSequence = () => {
         )}
         {showStart && (
           <div style={{ marginTop: '2rem', textAlign: 'center', animation: 'fadeIn 1s ease' }}>
-            
+
             {/* Section header */}
-            <p style={{ 
-              fontSize: '0.85em', 
-              color: 'var(--color-text-dim)', 
+            <p style={{
+              fontSize: '0.85em',
+              color: 'var(--color-text-dim)',
               marginBottom: '1.2rem',
               letterSpacing: '2px',
             }}>
@@ -178,7 +179,7 @@ const BootSequence = () => {
                     id={`difficulty-btn-${key.toLowerCase()}`}
                     className={`difficulty-btn ${mode.recommended ? 'recommended' : ''} ${isNightmare ? 'nightmare' : ''}`}
                     onClick={() => handleStart(key)}
-                    onMouseEnter={() => { setHoveredDifficulty(key); try { soundEngine.keyClick(); } catch(e) {} }}
+                    onMouseEnter={() => { setHoveredDifficulty(key); try { soundEngine.keyClick(); } catch (e) { } }}
                     onMouseLeave={() => setHoveredDifficulty(null)}
                     style={{
                       animation: `fadeIn ${0.8 + idx * 0.15}s ease`,
@@ -209,9 +210,9 @@ const BootSequence = () => {
             </div>
 
             {!audioStarted && (
-              <p style={{ 
-                marginTop: '1rem', 
-                fontSize: '0.7em', 
+              <p style={{
+                marginTop: '1rem',
+                fontSize: '0.7em',
                 color: 'var(--color-text-dim)',
                 animation: 'blink 1s infinite',
               }}>
