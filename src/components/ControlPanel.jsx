@@ -21,6 +21,20 @@ const ControlPanel = () => {
     return () => abortControllerRef.current?.abort();
   }, [gameState.round]);
 
+  // On any click in the game terminal, refocus the input
+  useEffect(() => {
+    const handleClick = () => {
+      // Don't focus if we are trying to click a button or interactive element,
+      // but the user specifically said "On any click in the game terminal, refocus the input".
+      // We will ensure it only focuses if we are playing.
+      if (gameState.gameStatus === 'playing') {
+        inputRef.current?.focus();
+      }
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [gameState.gameStatus]);
+
   const handleTransmit = async (e) => {
     e.preventDefault();
     if (!inputMessage.trim() || !gameState.activeSuspectId || gameState.transmissionsRemaining <= 0) return;
