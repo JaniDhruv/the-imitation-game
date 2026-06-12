@@ -369,7 +369,7 @@ Deploy to Vercel. The `api/transmit.js` serverless function handles Gemini calls
 
 | Layer | Technology |
 |-------|------------|
-| Framework | React 19 + Vite 6 |
+| Framework | React 19 + Vite 8 |
 | AI | Google Gemini API (`@google/genai`) |
 | Routing | React Router v7 |
 | Audio | Web Audio API — procedural synthesis |
