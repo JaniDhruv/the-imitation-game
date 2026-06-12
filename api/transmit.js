@@ -281,11 +281,11 @@ export default async function handler(req, res) {
 
   // Build system instruction with difficulty modifiers
   let personaPrompt = PERSONA_PROMPTS[persona] || "You are an AI.";
-  
+
   // Apply tell mode modifier to AI personas only (not human ones)
   const HUMAN_PERSONAS = ['NOVAK', 'WELLS', 'CARR', 'SHAW', 'FLEET'];
   const isAI = !HUMAN_PERSONAS.includes(persona);
-  
+
   if (isAI && tellMode === 'obvious') {
     personaPrompt += EASY_MODE_MODIFIER;
   } else if (isAI && tellMode === 'suppressed') {
@@ -347,7 +347,7 @@ Do not announce it. Let it leak through naturally if it does.`;
     res.status(200).json({ reply: replyText });
   } catch (error) {
     console.error("Gemini API Error:", error);
-    
+
     // Ultimate Fallback to OpenAI-compatible API (NVIDIA NIM / Kimi)
     const fallbackKey = process.env.FALLBACK_API_KEY || process.env.NVIDIA_API_KEY;
     if (fallbackKey) {
@@ -357,20 +357,17 @@ Do not announce it. Let it leak through naturally if it does.`;
         if (!fallbackUrl.endsWith('/chat/completions')) {
           fallbackUrl = fallbackUrl.replace(/\/+$/, '') + '/chat/completions';
         }
-        const fallbackModel = process.env.FALLBACK_MODEL || "google/gemma-2-2b-it";
-        
+        const fallbackModel = process.env.FALLBACK_MODEL || "meta/llama-3.1-8b-instruct";
+
         if (isPing) {
           return res.status(200).json({ reply: 'OK' });
         }
 
-        let openaiMessages = (formattedHistory || []).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.parts[0].text }));
-        
-        if (openaiMessages.length > 0) {
-          openaiMessages[0].content = `[SYSTEM INSTRUCTION: ${systemInstruction}]\n\n` + openaiMessages[0].content;
-          openaiMessages.push({ role: "user", content: message });
-        } else {
-          openaiMessages.push({ role: "user", content: `[SYSTEM INSTRUCTION: ${systemInstruction}]\n\n` + message });
-        }
+        let openaiMessages = [
+          { role: "system", content: systemInstruction },
+          ...(formattedHistory || []).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.parts[0].text })),
+          { role: "user", content: message }
+        ];
 
         const fallbackRes = await fetch(fallbackUrl, {
           method: "POST",
@@ -381,11 +378,12 @@ Do not announce it. Let it leak through naturally if it does.`;
           body: JSON.stringify({
             model: fallbackModel,
             messages: openaiMessages,
-            temperature: 0.7,
-            max_tokens: 150
+            temperature: 0.2,
+            top_p: 0.7,
+            max_tokens: 1024
           })
         });
-        
+
         const rawText = await fallbackRes.text();
         let fallbackData;
         try {
@@ -393,7 +391,7 @@ Do not announce it. Let it leak through naturally if it does.`;
         } catch (e) {
           throw new Error(`Invalid JSON from fallback API: ${rawText}`);
         }
-        
+
         if (fallbackData.choices && fallbackData.choices.length > 0) {
           return res.status(200).json({ reply: fallbackData.choices[0].message.content.trim() });
         } else {
