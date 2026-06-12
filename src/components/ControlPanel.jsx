@@ -40,7 +40,8 @@ const ControlPanel = () => {
     if (!inputMessage.trim() || !gameState.activeSuspectId || gameState.transmissionsRemaining <= 0) return;
     if (gameState.gameStatus !== 'playing') return;
 
-    const messageToSend = inputMessage;
+    // Strip out common LLM control token brackets before processing
+    const messageToSend = inputMessage.replace(/<\|.*?\|>/g, "[REDACTED]");
     const targetId = gameState.activeSuspectId;
     const targetSuspect = gameState.suspects.find(s => s.id === targetId);
 
